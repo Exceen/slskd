@@ -218,27 +218,23 @@ const Searches = ({ server } = {}) => {
           action={
             <>
               <Button
-                disabled={creating || !server.isConnected}
+                disabled={creating}
                 icon="plus"
                 onClick={create}
               />
               <Button
-                disabled={creating || !server.isConnected}
+                disabled={creating}
                 icon="search"
                 onClick={() => create({ navigate: true })}
               />
             </>
           }
           className="search-input"
-          disabled={creating || !server.isConnected}
+          disabled={creating}
           input={
             <input
               data-lpignore="true"
-              placeholder={
-                server.isConnected
-                  ? 'Search phrase'
-                  : 'Connect to server to perform a search'
-              }
+              placeholder="Search phrase"
               type="search"
             />
           }
