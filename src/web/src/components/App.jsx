@@ -359,15 +359,6 @@ class App extends Component {
             visible
             width="thin"
           >
-            {version.isCanary && (
-              <Menu.Item>
-                <Icon
-                  color="yellow"
-                  name="flask"
-                />
-                Canary
-              </Menu.Item>
-            )}
             {isAgent ? (
               <Menu.Item>
                 <Icon name="detective" />
@@ -423,6 +414,15 @@ class App extends Component {
               className="right"
               inverted
             >
+              {version.isCanary && (
+                <Menu.Item>
+                  <Icon
+                    color="yellow"
+                    name="flask"
+                  />
+                  Canary
+                </Menu.Item>
+              )}
               <Menu.Item onClick={() => this.toggleTheme()}>
                 <Icon name="theme" />
                 Theme
