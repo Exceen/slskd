@@ -110,22 +110,26 @@ namespace slskd.Search
         /// <param name="optionsMonitor"></param>
         /// <param name="soulseekClient"></param>
         /// <param name="contextFactory">The database context to use.</param>
+        /// <param name="connectionWatchdog">The connection watchdog to use for auto-connect.</param>
         public SearchService(
             IHubContext<SearchHub> searchHub,
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
-            IDbContextFactory<SearchDbContext> contextFactory)
+            IDbContextFactory<SearchDbContext> contextFactory,
+            ConnectionWatchdog connectionWatchdog)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
             Client = soulseekClient;
             ContextFactory = contextFactory;
+            ConnectionWatchdog = connectionWatchdog;
         }
 
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; }
             = new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
         private ISoulseekClient Client { get; }
+        private ConnectionWatchdog ConnectionWatchdog { get; }
         private IDbContextFactory<SearchDbContext> ContextFactory { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<Application>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
@@ -288,6 +292,34 @@ namespace slskd.Search
                         // response handler. we're only updating counts here.
                         SearchHub.BroadcastUpdateAsync(search);
                     }));
+
+                // auto-connect if not already connected
+                if (!Client.State.HasFlag(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn))
+                {
+                    Log.Information("Auto-connecting to Soulseek network before search for '{Query}'", query);
+
+                    // start the connection watchdog if not already running
+                    if (!ConnectionWatchdog.IsEnabled)
+                    {
+                        ConnectionWatchdog.Start();
+                    }
+
+                    // wait for connection with a 30 second timeout
+                    var connectionTimeout = TimeSpan.FromSeconds(30);
+                    var connectionStartTime = DateTime.UtcNow;
+
+                    while (!Client.State.HasFlag(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn))
+                    {
+                        if (DateTime.UtcNow - connectionStartTime > connectionTimeout)
+                        {
+                            throw new InvalidOperationException("Failed to auto-connect to Soulseek network within timeout period");
+                        }
+
+                        await Task.Delay(100);
+                    }
+
+                    Log.Information("Successfully auto-connected to Soulseek network for search '{Query}'", query);
+                }
 
                 // initiate the search. this can throw at invocation if there's a problem with
                 // the client state (e.g. disconnected) or a problem with the search (e.g. no terms)
