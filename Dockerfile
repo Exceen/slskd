@@ -1,6 +1,6 @@
 # build static web content
 # note: pin this to amd64 to speed it up, it is prohibitively slow under QEMU
-FROM --platform=$BUILDPLATFORM node:18-alpine3.18 AS web
+FROM node:18-alpine3.18 AS web
 ARG VERSION=0.0.1.65534-local
 
 WORKDIR /slskd
@@ -13,7 +13,7 @@ RUN sh ./bin/build --web-only --version $VERSION
 # build, test, and publish application binaries
 # note: this needs to be pinned to an amd64 image in order to publish armv7 binaries
 # https://github.com/dotnet/dotnet-docker/issues/1537#issuecomment-615269150
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS publish
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS publish
 ARG TARGETPLATFORM
 ARG VERSION=0.0.1.65534-local
 
@@ -43,6 +43,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   jq \
   wget \
   tini \
+  python3 \
+  && ln -s /usr/bin/python3 /usr/bin/python \
   && \
   rm -rf \
   /tmp/* \
